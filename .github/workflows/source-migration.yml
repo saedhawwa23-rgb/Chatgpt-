@@ -1,5 +1,6 @@
 name: Source migration
 
+# Imports the existing Android application without replacing target workflow files.
 on:
   workflow_dispatch:
   push:
