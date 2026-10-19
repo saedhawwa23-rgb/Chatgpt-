@@ -1,0 +1,47 @@
+name: Source migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/source-migration
+    paths:
+      - '.github/workflows/source-migration.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: source-migration-feature-source-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.repository == 'saedhawwa23-rgb/Chatgpt-'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/source-migration
+          fetch-depth: 0
+
+      - name: Fetch existing Android source
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch Chatgpt https://github.com/saedhawwa23-rgb/Usman-and-UMAR-automation-app-work-space-.git "$RUNNER_TEMP/source"
+          rsync -a --exclude='.git' "$RUNNER_TEMP/source/" ./
+          rm -rf .git
+          git init
+          git checkout -b feature/source-migration
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Migrate existing Android source into target repository'
+          git push --force-with-lease origin HEAD:feature/source-migration
