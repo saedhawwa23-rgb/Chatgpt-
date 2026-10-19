@@ -28,12 +28,15 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch existing Android source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git clone --depth 1 --branch Chatgpt https://github.com/saedhawwa23-rgb/Usman-and-UMAR-automation-app-work-space-.git "$RUNNER_TEMP/source"
           rsync -a --exclude='.git' "$RUNNER_TEMP/source/" ./
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          gh auth setup-git
           git add -A
           if git diff --cached --quiet; then
             echo 'No source changes to commit.'
