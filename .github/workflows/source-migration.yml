@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           git clone --depth 1 --branch Chatgpt https://github.com/saedhawwa23-rgb/Usman-and-UMAR-automation-app-work-space-.git "$RUNNER_TEMP/source"
-          rsync -a --exclude='.git' "$RUNNER_TEMP/source/" ./
+          rsync -a --exclude='.git' --exclude='.github/workflows/***' "$RUNNER_TEMP/source/" ./
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           gh auth setup-git
