@@ -118,7 +118,12 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$apk" | grep -E "package:|native-code"
           unzip -l "$apk" | grep -F 'lib/armeabi-v7a/libproot.so'
           unzip -l "$apk" | grep -F 'lib/armeabi-v7a/libproot-loader.so'
+          file "$apk"
+          echo "APK_PATH=$apk"
+          echo "APK_SIZE_BYTES=$(stat -c '%s' "$apk")"
+          echo "APK_SIZE_HUMAN=$(du -h "$apk" | cut -f1)"
           sha256sum "$apk" | tee app/build/outputs/apk/debug/SHA256SUMS.txt
+          echo "APK_SHA256=$(cut -d ' ' -f1 app/build/outputs/apk/debug/SHA256SUMS.txt)"
 
       - name: Upload debug APK artifact
         if: success()
