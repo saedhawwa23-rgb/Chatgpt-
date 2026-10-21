@@ -59,7 +59,9 @@ import androidx.compose.ui.platform.LocalContext
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -264,8 +266,17 @@ fun SettingsScreen(
                                 if (source.isBlank() || destination.isBlank()) {
                                     driveExportStatus = "Enter both a source and destination path."
                                 } else {
-                                    val result = StorageWorkspaceProvider.copyFile(context, source, destination)
-                                    driveExportStatus = if (result.success) result.data ?: "Export completed." else result.error ?: "Export failed."
+                                    driveExportStatus = "Exporting to the selected workspace…"
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = StorageWorkspaceProvider.copyFile(context, source, destination)
+                                        withContext(Dispatchers.Main) {
+                                            driveExportStatus = if (result.success) {
+                                                result.data ?: "Export completed."
+                                            } else {
+                                                result.error ?: "Export failed."
+                                            }
+                                        }
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
