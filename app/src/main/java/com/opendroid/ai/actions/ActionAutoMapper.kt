@@ -57,6 +57,12 @@ class ActionAutoMapper @Inject constructor() {
 
     private val actionAliases: Map<String, String> = mapOf(
 
+        // ── Native Android sharing ───────────────────────────────────
+        "SHARE_TEXT"              to "SHARE_CONTENT",
+        "SHARE_LINK"              to "SHARE_CONTENT",
+        "SHARE_URL"               to "SHARE_CONTENT",
+        "OPEN_SHARE_SHEET"        to "SHARE_CONTENT",
+
         // ── URL / Browser Navigation ────────────────────────────────
         "NAVIGATE_TO_URL"         to "OPEN_URL",
         "OPEN_BROWSER_URL"        to "OPEN_URL",
