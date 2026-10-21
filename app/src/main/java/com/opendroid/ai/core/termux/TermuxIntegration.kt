@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import com.opendroid.ai.core.storage.StorageWorkspaceProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -150,7 +151,7 @@ class TermuxIntegration @Inject constructor(
                     .ifBlank { "Termux could not start or finish the command (error $internalErrorCode)." }
                 else -> null
             }
-            val result = TermuxResult(
+            val commandResult = TermuxResult(
                 executionId = id,
                 taskLabel = task.label,
                 stdout = bundle?.getString(EXTRA_STDOUT).orEmpty(),
@@ -158,6 +159,37 @@ class TermuxIntegration @Inject constructor(
                 exitCode = bundle?.takeIf { error == null }?.getInt(EXTRA_EXIT_CODE),
                 error = error
             )
+            // Preserve agent setup/stop logs in the selected SAF workspace. If the
+            // user connected Google Drive in Settings, this writes through Drive's
+            // authorized document provider; otherwise it writes to app workspace.
+            val result = if (
+                task.label.contains("OpenManus", ignoreCase = true) ||
+                task.label.contains("SIGINT", ignoreCase = true)
+            ) {
+                val safeLabel = task.label.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+                val logText = buildString {
+                    appendLine("Task: ${task.label}")
+                    appendLine("Execution ID: $id")
+                    appendLine("Exit code: ${commandResult.exitCode ?: "unknown"}")
+                    commandResult.error?.let { appendLine("Error: $it") }
+                    appendLine()
+                    appendLine("--- stdout ---")
+                    appendLine(commandResult.stdout)
+                    appendLine()
+                    appendLine("--- stderr ---")
+                    appendLine(commandResult.stderr)
+                }
+                val saved = runCatching {
+                    StorageWorkspaceProvider.writeFile(context, "agent-results/$safeLabel-$id.txt", logText)
+                }.getOrNull()
+                if (saved?.success == true) {
+                    commandResult.copy(stdout = commandResult.stdout + "\\n[Agent log saved to workspace: agent-results/$safeLabel-$id.txt]")
+                } else {
+                    commandResult.copy(stderr = commandResult.stderr + "\\n[Agent log export failed: ${saved?.error ?: "storage provider error"}]")
+                }
+            } else {
+                commandResult
+            }
             waiters.remove(id)?.complete(result)
             _results.value = (_results.value + result).takeLast(MAX_RESULTS)
         }
