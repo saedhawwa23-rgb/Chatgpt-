@@ -149,6 +149,8 @@ jobs:
           grep -F 'DOWNLOAD DIRECTLY TO DRIVE / WORKSPACE' app/src/main/java/com/opendroid/ai/ui/screens/SettingsScreen.kt
           grep -F 'INSTALL OPENMANUS + OPENSWARM' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
           grep -F 'EXPORT LOG TO DRIVE' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
+          grep -F 'val sessionStarted: StateFlow<Boolean>' app/src/main/java/com/opendroid/ai/ui/viewmodel/LinuxTerminalViewModel.kt
+          grep -F 'val sessionStarted by viewModel.sessionStarted.collectAsState()' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
           test -s app/src/main/assets/install-agents-alpine.sh
           grep -F 'sha256=' app/src/main/assets/proot-build.properties
 
