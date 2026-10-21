@@ -9,7 +9,7 @@ status=0
 
 echo "[agents] Alpine ARM32 setup started: $(date -u)"
 echo "[agents] Installing free repository tools…"
-apk add --no-cache git python3 py3-pip py3-virtualenv nodejs npm curl bash || {
+apk add --no-cache git python3 py3-pip py3-virtualenv nodejs npm curl bash build-base linux-headers libffi-dev openssl-dev || {
   echo "[agents] ERROR: Alpine tool installation failed."
   status=1
 }
