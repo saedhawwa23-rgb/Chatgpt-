@@ -40,6 +40,8 @@ class LinuxRuntimeManager @Inject constructor(
     val rootfsDir: File get() = File(rootDir, ROOTFS_DIR)
     /** The packaged executable resolved through Android's native-library directory. */
     val prootFile: File get() = File(context.applicationInfo.nativeLibraryDir, PROOT_NAME)
+    /** oonid/pr's patched loader is packaged beside PRoot to satisfy Android W^X restrictions. */
+    val prootLoaderFile: File get() = File(context.applicationInfo.nativeLibraryDir, PROOT_LOADER_NAME)
     private val stateFile: File get() = File(rootDir, STATE_FILE)
     private val prootVerificationFile: File get() = File(rootDir, PROOT_VERIFIED_STATE)
 
@@ -121,6 +123,8 @@ class LinuxRuntimeManager @Inject constructor(
                     "PATH" to "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                     "TERM" to "xterm-256color",
                     "GIT_ASKPASS" to gitAskPass,
+                    "PROOT_LOADER" to prootLoaderFile.absolutePath,
+                    "PROOT_NO_SECCOMP" to "1",
                     "GIT_USERNAME" to "x-access-token",
                     "GIT_TERMINAL_PROMPT" to "0"
                 ) + githubToken?.let { mapOf("GITHUB_TOKEN" to it) }.orEmpty()
@@ -176,6 +180,8 @@ class LinuxRuntimeManager @Inject constructor(
             appendLine("supportedAbis=${Build.SUPPORTED_ABIS.joinToString(",")}")
             appendLine("nativeLibraryDir=${context.applicationInfo.nativeLibraryDir}")
             appendLine("resolvedProotPath=${prootFile.absolutePath}")
+            appendLine("resolvedProotLoaderPath=${prootLoaderFile.absolutePath}")
+            appendLine("prootLoaderPresent=${prootLoaderFile.isFile}")
             appendLine("prootPathPolicy=PACKAGED_NATIVE_LIBRARY_ONLY")
             appendLine("legacyWritableProotPathRejected=${rootDir.resolve("proot-armv7").absolutePath}")
             appendLine("prootSource=${expectedProotSource()}")
@@ -236,6 +242,9 @@ class LinuxRuntimeManager @Inject constructor(
     private fun ensureProotReady() {
         check(prootFile.parentFile?.canonicalFile != rootDir.canonicalFile) {
             "Refusing to execute PRoot from writable linux-runtime storage"
+        }
+        if (expectedProotSource().contains("oonid/pr") && (!prootLoaderFile.isFile || !prootLoaderFile.canExecute())) {
+            throw IllegalStateException("Patched PRoot loader is missing or not executable at ${prootLoaderFile.absolutePath}")
         }
         val result = verifyProotExecutable()
         if (!result.success) {
@@ -421,6 +430,7 @@ class LinuxRuntimeManager @Inject constructor(
         private const val ROOTFS_DIR = "alpine-armv7"
         private const val ROOTFS_ARCHIVE = "alpine-minirootfs-3.24.2-armv7.tar.gz"
         private const val PROOT_NAME = "libproot.so"
+        private const val PROOT_LOADER_NAME = "libproot-loader.so"
         private const val PROOT_METADATA_ASSET = "proot-build.properties"
         private const val STATE_FILE = "install.state"
         private const val PROOT_VERIFIED_STATE = "proot.verified"
