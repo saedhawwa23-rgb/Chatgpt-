@@ -377,7 +377,7 @@ fun SettingsScreen(
                                 val raw = localUrl.trim()
                                 val normalized = if (raw.startsWith("https://", true) || raw.startsWith("http://", true)) raw else "https://$raw"
                                 val uri = runCatching { Uri.parse(normalized) }.getOrNull()
-                                if (uri != null && uri.scheme in listOf("http", "https") && !uri.host.isNullOrBlank()) {
+                                if (uri != null && (uri.scheme == "http" || uri.scheme == "https") && !uri.host.isNullOrBlank()) {
                                     runCatching {
                                         context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                         localToolsStatus = "Browser intent opened for $normalized."
