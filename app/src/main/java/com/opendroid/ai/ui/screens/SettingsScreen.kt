@@ -304,16 +304,21 @@ fun SettingsScreen(
                                                 app.packageName.equals(query, ignoreCase = true)
                                         }
                                     }.getOrNull()
-                                    val launch = match?.let { pm.getLaunchIntentForPackage(it.packageName) }
-                                    if (launch == null) {
-                                        localToolsStatus = "No launchable installed app matched '$query'."
+                                    val packageName = match?.packageName
+                                    if (packageName == null) {
+                                        localToolsStatus = "No installed app matched '$query'."
                                     } else {
-                                        runCatching {
-                                            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            context.startActivity(launch)
-                                            localToolsStatus = "Opened ${match.packageName}."
-                                        }.onFailure {
-                                            localToolsStatus = "Could not open the selected app: ${it.message ?: "launch failed"}"
+                                        val launch = pm.getLaunchIntentForPackage(packageName)
+                                        if (launch == null) {
+                                            localToolsStatus = "App '$packageName' has no launchable activity."
+                                        } else {
+                                            runCatching {
+                                                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                context.startActivity(launch)
+                                                localToolsStatus = "Opened $packageName."
+                                            }.onFailure {
+                                                localToolsStatus = "Could not open the selected app: ${it.message ?: "launch failed"}"
+                                            }
                                         }
                                     }
                                 }
