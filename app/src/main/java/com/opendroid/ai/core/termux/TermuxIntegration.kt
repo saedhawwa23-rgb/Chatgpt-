@@ -183,9 +183,9 @@ class TermuxIntegration @Inject constructor(
                     StorageWorkspaceProvider.writeFile(context, "agent-results/$safeLabel-$id.txt", logText)
                 }.getOrNull()
                 if (saved?.success == true) {
-                    commandResult.copy(stdout = commandResult.stdout + "\\n[Agent log saved to workspace: agent-results/$safeLabel-$id.txt]")
+                    commandResult.copy(stdout = commandResult.stdout + "\n[Agent log saved to workspace: agent-results/$safeLabel-$id.txt]")
                 } else {
-                    commandResult.copy(stderr = commandResult.stderr + "\\n[Agent log export failed: ${saved?.error ?: "storage provider error"}]")
+                    commandResult.copy(stderr = commandResult.stderr + "\n[Agent log export failed: ${saved?.error ?: "storage provider error"}]")
                 }
             } else {
                 commandResult
