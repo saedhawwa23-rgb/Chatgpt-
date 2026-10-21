@@ -33,6 +33,10 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.opendroid.ai.core.storage.StorageWorkspaceProvider
 import com.opendroid.ai.data.models.AutoMode
 import com.opendroid.ai.data.models.LLMConfig
 import com.opendroid.ai.data.models.effectiveGrantedActions
@@ -104,6 +108,18 @@ fun SettingsScreen(
     var planningSectionExpanded by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var driveHubLabel by remember {
+        mutableStateOf(StorageWorkspaceProvider.getCustomFolderDisplayName(context))
+    }
+    val driveHubPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            StorageWorkspaceProvider.setCustomFolderUri(context, uri)
+            driveHubLabel = StorageWorkspaceProvider.getCustomFolderDisplayName(context)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -195,6 +211,27 @@ fun SettingsScreen(
                                 color = TextSecondary
                             )
                         }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardBackground)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("GOOGLE DRIVE HUB", fontWeight = FontWeight.Bold, color = AccentCyan)
+                        Text(
+                            "Choose Google Drive in Android's folder picker to make it the shared workspace for supported file operations. No AI key or paid API is required; Android asks you to authorize access.",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                        Text("Current workspace: $driveHubLabel", color = TextPrimary, fontSize = 12.sp)
+                        Button(
+                            onClick = { driveHubPicker.launch(null) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("CONNECT DRIVE / CHOOSE WORKSPACE") }
                     }
                 }
             }
