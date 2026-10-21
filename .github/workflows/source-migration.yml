@@ -144,6 +144,12 @@ jobs:
           grep -F 'INSTALL_OPEN_SOURCE_AGENTS' app/src/main/java/com/opendroid/ai/core/termux/TermuxIntegration.kt
           grep -F 'STOP_AGENT_JOBS' app/src/main/java/com/opendroid/ai/core/termux/TermuxIntegration.kt
           grep -F 'PROOT_LOADER' app/src/main/java/com/opendroid/ai/core/linux/LinuxRuntimeManager.kt
+          grep -F 'suspend fun downloadUrl' app/src/main/java/com/opendroid/ai/core/storage/StorageWorkspaceProvider.kt
+          grep -F 'COPY WORKSPACE OUTPUT TO DRIVE / FOLDER' app/src/main/java/com/opendroid/ai/ui/screens/SettingsScreen.kt
+          grep -F 'DOWNLOAD DIRECTLY TO DRIVE / WORKSPACE' app/src/main/java/com/opendroid/ai/ui/screens/SettingsScreen.kt
+          grep -F 'INSTALL OPENMANUS + OPENSWARM' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
+          grep -F 'EXPORT LOG TO DRIVE' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
+          test -s app/src/main/assets/install-agents-alpine.sh
           grep -F 'sha256=' app/src/main/assets/proot-build.properties
 
       - name: Run unit tests and build ARM32 debug APK
