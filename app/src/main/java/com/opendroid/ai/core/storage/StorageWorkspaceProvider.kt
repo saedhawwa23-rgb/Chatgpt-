@@ -12,6 +12,10 @@ import com.opendroid.ai.actions.base.ActionResult
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -300,6 +304,86 @@ object StorageWorkspaceProvider {
             ActionResult(true, text, null)
         } catch (e: Exception) {
             ActionResult(false, null, "Couldn't read file: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Downloads an HTTP(S) resource directly into the selected workspace or authorized SAF folder.
+     * No AI provider, API key, or paid service is used. The streamed byte limit protects the phone
+     * from unbounded downloads.
+     */
+    suspend fun downloadUrl(
+        context: Context,
+        sourceUrl: String,
+        destinationPath: String,
+        maxBytes: Long = 250L * 1024L * 1024L
+    ): ActionResult = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            val source = Uri.parse(sourceUrl.trim())
+            if (source.scheme !in listOf("http", "https") || source.host.isNullOrBlank() || !source.encodedUserInfo.isNullOrBlank()) {
+                return@withContext ActionResult(false, null, "Only valid public HTTP(S) URLs are supported.")
+            }
+            val cleanPath = cleanRelativePath(destinationPath)
+            if (cleanPath.isBlank() || cleanPath.split("/").any { it == ".." }) {
+                return@withContext ActionResult(false, null, "Enter a safe relative destination path.")
+            }
+            connection = (URL(source.toString()).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 20_000
+                readTimeout = 60_000
+                instanceFollowRedirects = true
+                requestMethod = "GET"
+            }
+            val response = connection.responseCode
+            if (response !in 200..299) {
+                return@withContext ActionResult(false, null, "Download failed: HTTP $response")
+            }
+            val expected = connection.contentLengthLong
+            if (expected > maxBytes) {
+                return@withContext ActionResult(false, null, "Download is larger than the ${maxBytes / (1024L * 1024L)} MB safety limit.")
+            }
+
+            val customUri = if (shouldUseCustomFolder(context, cleanPath)) getCustomFolderUri(context) else null
+            val targetFile: File?
+            val targetDocument: DocumentFile?
+            if (customUri != null) {
+                val root = DocumentFile.fromTreeUri(context, customUri)
+                    ?: return@withContext ActionResult(false, null, "Could not open the selected workspace provider.")
+                targetDocument = findOrCreateDocumentByPath(root, cleanPath, isDirectory = false)
+                    ?: return@withContext ActionResult(false, null, "Could not create download destination: $cleanPath")
+                targetFile = null
+            } else {
+                targetDocument = null
+                targetFile = resolveFile(context, cleanPath)
+                targetFile.parentFile?.mkdirs()
+            }
+
+            var total = 0L
+            val output = if (targetDocument != null) {
+                context.contentResolver.openOutputStream(targetDocument.uri, "wt")
+            } else {
+                targetFile?.outputStream()
+            } ?: return@withContext ActionResult(false, null, "Could not open download destination: $cleanPath")
+
+            output.use { out ->
+                connection.inputStream.use { input ->
+                    val buffer = ByteArray(32 * 1024)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        if (total > maxBytes) {
+                            throw IllegalStateException("Download exceeded the ${maxBytes / (1024L * 1024L)} MB safety limit.")
+                        }
+                        out.write(buffer, 0, read)
+                    }
+                }
+            }
+            ActionResult(true, "Downloaded $total bytes to $cleanPath", null)
+        } catch (e: Exception) {
+            ActionResult(false, null, "Download failed: ${e.localizedMessage ?: e.javaClass.simpleName}")
+        } finally {
+            connection?.disconnect()
         }
     }
 
