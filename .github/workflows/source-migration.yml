@@ -89,6 +89,24 @@ jobs:
           git -C /tmp/oonid-pr checkout --quiet 1b2ea7966b5105e7d58051a394c25da97bf85a7d
           git config --global url."https://github.com/".insteadOf git@github.com:
           git -C /tmp/oonid-pr submodule update --init --depth 1 vendor/samba
+          # Upstream build.sh uses the clang target triple for the NDK sysroot
+          # directory too. NDK r27c stores ARM32 sysroot libraries under
+          # arm-linux-androideabi, while the compiler driver is armv7a-...-clang.
+          # Patch only this temporary checkout's sysroot-directory selection.
+          python3 - <<'PY'
+          from pathlib import Path
+          script = Path("/tmp/oonid-pr/scripts/build.sh")
+          source = script.read_text()
+          old = '    cp -a "${ndk_sysroot}/usr/lib/${triple}" "${sysroot}/usr/lib/"'
+          new = '''    local sysroot_triple="${triple}"
+              if [ "${arch}" = "arm" ]; then
+                  sysroot_triple="arm-linux-androideabi"
+              fi
+              cp -a "${ndk_sysroot}/usr/lib/${sysroot_triple}" "${sysroot}/usr/lib/"'''
+          if old not in source:
+              raise SystemExit("Expected upstream NDK sysroot line not found; refusing an unverified patch.")
+          script.write_text(source.replace(old, new, 1))
+          PY
           bash /tmp/oonid-pr/scripts/build.sh --arch=arm --ndk-path="$ANDROID_HOME/ndk/27.2.12479018"
           file /tmp/oonid-pr/build/out/arm/proot | tee /tmp/proot-file.txt
           grep -E 'ELF 32-bit.*ARM' /tmp/proot-file.txt
