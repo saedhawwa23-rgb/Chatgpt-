@@ -126,7 +126,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                         runCatching { TermuxGitHubClone.command(repositoryUrl) }
                             .onSuccess { clone ->
                                 val safeArgs = clone.arguments.joinToString(" ")
-                                viewModel.send("if ! command -v git >/dev/null 2>&1; then apk add --no-cache git; fi && cd /home/usman && $safeArgs")
+                                viewModel.send("if ! command -v git >/dev/null 2>&1; then apk add --no-cache git; fi && cd /workspace && $safeArgs")
                                 command = safeArgs
                             }
                             .onFailure { failure ->
