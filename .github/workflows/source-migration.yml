@@ -33,6 +33,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Import once. Later workflow runs must preserve target-branch edits.
+          if [ -f settings.gradle ] && [ -d app/src/main ]; then
+            echo 'Android source is already present; preserving branch changes.'
+            exit 0
+          fi
           git clone --depth 1 --branch Chatgpt https://github.com/saedhawwa23-rgb/Usman-and-UMAR-automation-app-work-space-.git "$RUNNER_TEMP/source"
           rsync -a --exclude='.git' --exclude='.github/workflows/***' "$RUNNER_TEMP/source/" ./
           git config user.name 'github-actions[bot]'
