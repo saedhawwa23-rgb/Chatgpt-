@@ -133,6 +133,19 @@ jobs:
           curl --fail --silent --show-error --location 'https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/armv7/alpine-minirootfs-3.24.2-armv7.tar.gz' -o /tmp/alpine-minirootfs-3.24.2-armv7.tar.gz
           printf '%s  %s\n' '5552f1ef2398cee46ef2cf733f8f1258f39a77ad065dfd47282fc0df9fe1976c' /tmp/alpine-minirootfs-3.24.2-armv7.tar.gz | sha256sum -c -
 
+      - name: Verify requested zero-cost integrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'GOOGLE DRIVE HUB' app/src/main/java/com/opendroid/ai/ui/screens/SettingsScreen.kt
+          grep -F 'ZERO-COST LOCAL PHONE TOOLS' app/src/main/java/com/opendroid/ai/ui/screens/SettingsScreen.kt
+          grep -F 'SHARE_CONTENT' app/src/main/java/com/opendroid/ai/core/agent/ActionSchema.kt
+          grep -F 'CLONE PUBLIC REPOSITORY' app/src/main/java/com/opendroid/ai/ui/screens/IntegratedTerminalScreen.kt
+          grep -F 'INSTALL_OPEN_SOURCE_AGENTS' app/src/main/java/com/opendroid/ai/core/termux/TermuxIntegration.kt
+          grep -F 'STOP_AGENT_JOBS' app/src/main/java/com/opendroid/ai/core/termux/TermuxIntegration.kt
+          grep -F 'PROOT_LOADER' app/src/main/java/com/opendroid/ai/core/linux/LinuxRuntimeManager.kt
+          grep -F 'sha256=' app/src/main/assets/proot-build.properties
+
       - name: Run unit tests and build ARM32 debug APK
         run: ./gradlew -Dalpine.archive=/tmp/alpine-minirootfs-3.24.2-armv7.tar.gz testDebugUnitTest assembleDebug --stacktrace --no-daemon
 
