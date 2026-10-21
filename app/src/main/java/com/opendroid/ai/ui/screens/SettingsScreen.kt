@@ -271,7 +271,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("COPY WORKSPACE OUTPUT TO DRIVE / FOLDER") }
                         driveExportStatus?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
-                        Divider(color = BorderSubtle)
+                        Divider(color = TextSecondary.copy(alpha = 0.25f))
                         Text("ZERO-COST URL DOWNLOAD", fontWeight = FontWeight.Bold, color = AccentCyan)
                         OutlinedTextField(
                             value = downloadSourceUrl,
