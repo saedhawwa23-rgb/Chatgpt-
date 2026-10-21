@@ -46,6 +46,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
     val output by viewModel.output.collectAsState()
     val message by viewModel.message.collectAsState()
     val runtimeStatus by viewModel.status.collectAsState()
+    val sessionStarted by viewModel.sessionStarted.collectAsState()
     val diagnostics by viewModel.diagnostics.collectAsState()
     val termuxAvailable by viewModel.termuxAvailable.collectAsState()
     val termuxStatus by viewModel.termuxStatus.collectAsState()
