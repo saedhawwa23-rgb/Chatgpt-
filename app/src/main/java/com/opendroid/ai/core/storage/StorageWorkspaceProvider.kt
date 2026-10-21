@@ -307,18 +307,21 @@ object StorageWorkspaceProvider {
         return if (shouldUseCustomFolder(context, filePath)) {
             try {
                 val customUri = getCustomFolderUri(context)
-                    ?: return writeFileLocal(context, filePath, content)
+                    ?: return ActionResult(false, null, "Selected workspace permission is unavailable; reconnect the folder before writing.")
                 val root = DocumentFile.fromTreeUri(context, customUri)
-                    ?: return writeFileLocal(context, filePath, content)
+                    ?: return ActionResult(false, null, "Could not open the selected workspace provider.")
                 val cleanPath = cleanRelativePath(filePath)
+                require(cleanPath.isNotBlank() && cleanPath.split("/").none { it == ".." }) {
+                    "Invalid workspace path."
+                }
                 val doc = findOrCreateDocumentByPath(root, cleanPath, isDirectory = false)
-                    ?: return writeFileLocal(context, filePath, content)
+                    ?: return ActionResult(false, null, "Could not create the destination document: $filePath")
                 context.contentResolver.openOutputStream(doc.uri, "wt")?.use { stream ->
                     stream.bufferedWriter().use { it.write(content) }
                 } ?: return ActionResult(false, null, "Could not open file stream to write: $filePath")
-                ActionResult(true, "File saved at ${doc.name ?: filePath}", null)
+                ActionResult(true, "File saved to selected workspace at ${doc.name ?: filePath}", null)
             } catch (e: Exception) {
-                writeFileLocal(context, filePath, content)
+                ActionResult(false, null, "Could not write to the selected workspace: ${e.localizedMessage ?: e.javaClass.simpleName}")
             }
         } else {
             writeFileLocal(context, filePath, content)
