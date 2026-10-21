@@ -191,6 +191,7 @@ class SystemActions @Inject constructor(
         // Browser
         OpenBrowserAction(),
         OpenUrlAction(),
+        ShareContentAction(),
         EnablePrivateModeAction(),
         ClearBrowserDataAction()
     )
@@ -1178,6 +1179,37 @@ class SystemActions @Inject constructor(
             } catch (e: Exception) {
                 Log.e("OpenUrl", "Failed: ${e.localizedMessage}")
                 ActionResult(false, null, "Couldn't open that URL.")
+            }
+        }
+    }
+
+    /**
+     * Opens Android's native share sheet. Sharing is a local OS action and never invokes an AI provider.
+     * The result confirms only that the chooser opened; the user decides whether and where to share.
+     */
+    private class ShareContentAction : Action {
+        override val name: String = "SHARE_CONTENT"
+
+        override suspend fun execute(params: Map<String, String>, context: Context): ActionResult {
+            val text = params["text"]?.trim().orEmpty()
+            val url = params["url"]?.trim().orEmpty()
+            val payload = listOf(text, url).filter { it.isNotBlank() }.joinToString("\\n")
+            if (payload.isBlank()) {
+                return ActionResult(false, null, "Provide text or a URL to share.")
+            }
+            return try {
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, payload)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(sendIntent, "Share with").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+                ActionResult(true, "Android share sheet opened. Choose a destination to complete sharing.", null)
+            } catch (e: Exception) {
+                Log.e("ShareContent", "Unable to open share sheet: ${e.javaClass.simpleName}")
+                ActionResult(false, null, "Couldn't open the Android share sheet.")
             }
         }
     }
