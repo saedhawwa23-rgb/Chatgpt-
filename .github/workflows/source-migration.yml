@@ -68,7 +68,12 @@ jobs:
           deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe
           deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble-security main universe
           EOF
-          sudo apt-get update -o APT::Get::Architectures='amd64' -o APT::Get::Architectures::='armhf'
+          # Keep Ubuntu's amd64-only mirrors restricted to amd64. ARMHF packages
+          # are served by ports.ubuntu.com, not security.ubuntu.com.
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            sudo sed -i '/^Types: deb$/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
+          sudo apt-get update
           sudo apt-get install -y gcc-arm-linux-gnueabihf libseccomp-dev:armhf libtalloc-dev:armhf pkg-config
 
       - name: Build and package pinned ARM32 PRoot
