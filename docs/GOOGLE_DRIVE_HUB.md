@@ -2,7 +2,9 @@
 
 USMAN AND UMAR uses Android's Storage Access Framework (SAF) for user-authorized file access. In **Settings → Google Drive Hub**, choose **Connect Drive / Choose Workspace**, then select Google Drive in the Android folder picker and authorize the folder. Android's Google Drive provider must be available on the device and the user must be signed in; Android does not permit silent account access.
 
-The selected tree URI is persisted by `StorageWorkspaceProvider` and can be used by supported workspace file operations. Local file generation, public GitHub cloning, URL opening, and Android share intents must not require an AI provider or paid API. Google Drive access through SAF does not require a separate paid API key.
+The selected tree URI is persisted by `StorageWorkspaceProvider` and can be used by supported workspace file operations. Settings also exposes a direct **Copy workspace output to Drive / folder** control; it copies a local app-workspace file or directory through the selected document provider. The Termux bridge writes OpenManus/OpenSwarm task logs through the same provider when a folder is selected.
+
+Local file generation, public GitHub cloning, URL opening, and Android share intents must not require an AI provider or paid API. Google Drive access through SAF does not require a separate paid API key.
 
 ## Boundaries
 
