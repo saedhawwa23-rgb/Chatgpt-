@@ -288,9 +288,11 @@ class LinuxRuntimeManager @Inject constructor(
         val stdout = StringBuilder()
         val stderr = StringBuilder()
         return try {
-            val process = ProcessBuilder(path.absolutePath, PROOT_REQUIRED_OPTION, "--version")
+            val processBuilder = ProcessBuilder(path.absolutePath, PROOT_REQUIRED_OPTION, "--version")
                 .redirectErrorStream(false)
-                .start()
+            processBuilder.environment()["PROOT_LOADER"] = prootLoaderFile.absolutePath
+            processBuilder.environment()["PROOT_NO_SECCOMP"] = "1"
+            val process = processBuilder.start()
             val stdoutReader = thread(start = true, name = "proot-diagnostics-stdout") {
                 process.inputStream.bufferedReader().use { stdout.append(it.readText()) }
             }
