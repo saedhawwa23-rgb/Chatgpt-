@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.opendroid.ai.core.linux.RuntimeStatus
 import com.opendroid.ai.core.storage.StorageWorkspaceProvider
 import com.opendroid.ai.core.termux.TermuxGitHubClone
@@ -46,6 +49,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
     val termuxAvailable by viewModel.termuxAvailable.collectAsState()
     val termuxStatus by viewModel.termuxStatus.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var command by remember { mutableStateOf("echo USMAN_AND_UMAR_TERMINAL_OK") }
     var repositoryUrl by remember { mutableStateOf("") }
     var agentInstallStatus by remember { mutableStateOf<String?>(null) }
@@ -147,15 +151,20 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                     ) { Text("REFRESH OUTPUT") }
                     OutlinedButton(
                         onClick = {
-                            val result = StorageWorkspaceProvider.copyFile(
-                                context,
-                                "agent-install-results.txt",
-                                "agent-results/agent-install-results.txt"
-                            )
-                            agentInstallStatus = if (result.success) {
-                                result.data ?: "Agent log exported to selected workspace."
-                            } else {
-                                result.error ?: "Agent log export failed."
+                            agentInstallStatus = "Exporting agent log to the selected workspace…"
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val result = StorageWorkspaceProvider.copyFile(
+                                    context,
+                                    "agent-install-results.txt",
+                                    "agent-results/agent-install-results.txt"
+                                )
+                                withContext(Dispatchers.Main) {
+                                    agentInstallStatus = if (result.success) {
+                                        result.data ?: "Agent log exported to selected workspace."
+                                    } else {
+                                        result.error ?: "Agent log export failed."
+                                    }
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f)
