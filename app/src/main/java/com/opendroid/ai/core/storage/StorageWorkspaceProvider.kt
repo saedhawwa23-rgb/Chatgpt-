@@ -429,14 +429,50 @@ object StorageWorkspaceProvider {
     fun copyFile(context: Context, srcPath: String, destPath: String): ActionResult {
         return try {
             val src = resolveFile(context, srcPath)
-            val dest = resolveFile(context, destPath)
             if (!src.exists()) {
                 return ActionResult(false, null, "Source path does not exist: ${src.absolutePath}")
             }
-            copyRecursively(src, dest)
-            ActionResult(true, "Copied from ${src.absolutePath} to ${dest.absolutePath}!", null)
+            if (shouldUseCustomFolder(context, destPath)) {
+                val customUri = getCustomFolderUri(context)
+                    ?: return ActionResult(false, null, "Selected workspace permission is unavailable; reconnect the folder before copying.")
+                val root = DocumentFile.fromTreeUri(context, customUri)
+                    ?: return ActionResult(false, null, "Could not open the selected workspace provider.")
+                val cleanPath = cleanRelativePath(destPath)
+                require(cleanPath.isNotBlank() && cleanPath.split("/").none { it == ".." }) {
+                    "Invalid destination workspace path."
+                }
+                val destination = findOrCreateDocumentByPath(root, cleanPath, isDirectory = src.isDirectory)
+                    ?: return ActionResult(false, null, "Could not create destination in selected workspace: $destPath")
+                if (src.isDirectory && !destination.isDirectory) {
+                    return ActionResult(false, null, "Destination exists but is not a directory: $destPath")
+                }
+                copyLocalTreeToDocument(context, src, destination)
+                ActionResult(true, "Copied ${src.absolutePath} to selected workspace at $destPath", null)
+            } else {
+                val dest = resolveFile(context, destPath)
+                copyRecursively(src, dest)
+                ActionResult(true, "Copied from ${src.absolutePath} to ${dest.absolutePath}!", null)
+            }
         } catch (e: Exception) {
-            ActionResult(false, null, "Couldn't copy file: ${e.localizedMessage}")
+            ActionResult(false, null, "Couldn't copy file: ${e.localizedMessage ?: e.javaClass.simpleName}")
+        }
+    }
+
+    /** Copies local build/download outputs into a user-authorized SAF folder (including Google Drive). */
+    private fun copyLocalTreeToDocument(context: Context, source: File, destination: DocumentFile) {
+        if (!source.isDirectory) {
+            context.contentResolver.openOutputStream(destination.uri, "wt")?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+            } ?: throw IllegalStateException("Could not open destination output stream for ${destination.name}")
+            return
+        }
+        source.listFiles()?.forEach { child ->
+            val target = if (child.isDirectory) {
+                destination.findFile(child.name) ?: destination.createDirectory(child.name)
+            } else {
+                destination.findFile(child.name) ?: destination.createFile(guessMimeType(child.name), child.name)
+            } ?: throw IllegalStateException("Could not create destination for ${child.name}")
+            copyLocalTreeToDocument(context, child, target)
         }
     }
 
