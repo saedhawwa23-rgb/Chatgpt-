@@ -130,7 +130,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                                 script.outputStream().use { output -> input.copyTo(output) }
                             }
                             script.setExecutable(true, false)
-                            viewModel.send("sh /workspace/install-agents-alpine.sh; rc=$?; echo AGENT_INSTALL_EXIT:$rc")
+                            viewModel.send("sh /workspace/install-agents-alpine.sh; rc=\$?; echo AGENT_INSTALL_EXIT:\$rc")
                             agentInstallStatus = "Agent setup started. Use REFRESH OUTPUT to collect its result, then export the log to Drive."
                         }.onFailure {
                             agentInstallStatus = "Could not prepare agent installer: ${it.message ?: "asset copy failed"}"
