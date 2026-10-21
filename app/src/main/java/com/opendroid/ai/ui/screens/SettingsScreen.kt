@@ -116,6 +116,9 @@ fun SettingsScreen(
     var driveExportSource by remember { mutableStateOf("") }
     var driveExportDestination by remember { mutableStateOf("exports/output.txt") }
     var driveExportStatus by remember { mutableStateOf<String?>(null) }
+    var downloadSourceUrl by remember { mutableStateOf("") }
+    var downloadDestination by remember { mutableStateOf("downloads/file.bin") }
+    var downloadStatus by remember { mutableStateOf<String?>(null) }
     var localAppName by remember { mutableStateOf("") }
     var localUrl by remember { mutableStateOf("") }
     var localShareText by remember { mutableStateOf("") }
@@ -268,6 +271,43 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("COPY WORKSPACE OUTPUT TO DRIVE / FOLDER") }
                         driveExportStatus?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
+                        Divider(color = BorderSubtle)
+                        Text("ZERO-COST URL DOWNLOAD", fontWeight = FontWeight.Bold, color = AccentCyan)
+                        OutlinedTextField(
+                            value = downloadSourceUrl,
+                            onValueChange = { downloadSourceUrl = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Public HTTP(S) download URL") },
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = downloadDestination,
+                            onValueChange = { downloadDestination = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Save path in selected folder") },
+                            singleLine = true
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val sourceUrl = downloadSourceUrl.trim()
+                                val destination = downloadDestination.trim()
+                                if (sourceUrl.isBlank() || destination.isBlank()) {
+                                    downloadStatus = "Enter both a URL and destination path."
+                                } else {
+                                    downloadStatus = "Download started…"
+                                    coroutineScope.launch {
+                                        val result = StorageWorkspaceProvider.downloadUrl(context, sourceUrl, destination)
+                                        downloadStatus = if (result.success) {
+                                            result.data ?: "Download completed."
+                                        } else {
+                                            result.error ?: "Download failed."
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("DOWNLOAD DIRECTLY TO DRIVE / WORKSPACE") }
+                        downloadStatus?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
                     }
                 }
             }
