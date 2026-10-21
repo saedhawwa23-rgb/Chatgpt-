@@ -328,25 +328,28 @@ object StorageWorkspaceProvider {
             if (cleanPath.isBlank() || cleanPath.split("/").any { it == ".." }) {
                 return@withContext ActionResult(false, null, "Enter a safe relative destination path.")
             }
-            connection = (URL(source.toString()).openConnection() as HttpURLConnection).apply {
+            val opened = (URL(source.toString()).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 20_000
                 readTimeout = 60_000
                 instanceFollowRedirects = true
                 requestMethod = "GET"
             }
-            val response = connection.responseCode
+            connection = opened
+            val response = opened.responseCode
             if (response !in 200..299) {
                 return@withContext ActionResult(false, null, "Download failed: HTTP $response")
             }
-            val expected = connection.contentLengthLong
+            val expected = opened.contentLengthLong
             if (expected > maxBytes) {
                 return@withContext ActionResult(false, null, "Download is larger than the ${maxBytes / (1024L * 1024L)} MB safety limit.")
             }
 
-            val customUri = if (shouldUseCustomFolder(context, cleanPath)) getCustomFolderUri(context) else null
+            val useCustomFolder = shouldUseCustomFolder(context, cleanPath)
             val targetFile: File?
             val targetDocument: DocumentFile?
-            if (customUri != null) {
+            if (useCustomFolder) {
+                val customUri = getCustomFolderUri(context)
+                    ?: return@withContext ActionResult(false, null, "Selected workspace permission is unavailable; reconnect the folder before downloading.")
                 val root = DocumentFile.fromTreeUri(context, customUri)
                     ?: return@withContext ActionResult(false, null, "Could not open the selected workspace provider.")
                 targetDocument = findOrCreateDocumentByPath(root, cleanPath, isDirectory = false)
@@ -366,7 +369,7 @@ object StorageWorkspaceProvider {
             } ?: return@withContext ActionResult(false, null, "Could not open download destination: $cleanPath")
 
             output.use { out ->
-                connection.inputStream.use { input ->
+                opened.inputStream.use { input ->
                     val buffer = ByteArray(32 * 1024)
                     while (true) {
                         val read = input.read(buffer)
