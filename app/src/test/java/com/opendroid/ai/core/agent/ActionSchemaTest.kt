@@ -106,6 +106,17 @@ class ActionSchemaTest {
     // ── Lookup utilities ────────────────────────────────────────────────
 
     @Test
+    fun `native share sheet is registered as a local optional-parameter action`() {
+        val share = ActionSchema.getAction("SHARE_CONTENT")
+        assertNotNull(share)
+        assertEquals(ActionCategory.SYSTEM, share!!.category)
+        assertTrue(share.params.all { !it.required })
+        assertTrue(share.params.any { it.name == "text" })
+        assertTrue(share.params.any { it.name == "url" })
+        assertTrue(ActionSchema.isValid("SHARE_CONTENT"))
+    }
+
+    @Test
     fun `getAction finds known actions and misses unknown ones`() {
         assertNotNull(ActionSchema.getAction("OPEN_APP"))
         assertNull(ActionSchema.getAction("NOPE"))
