@@ -5,6 +5,7 @@ import android.os.Build
 import android.util.Log
 import com.opendroid.ai.core.pty.PtySession
 import com.opendroid.ai.core.security.GitHubTokenStore
+import com.opendroid.ai.core.storage.StorageWorkspaceProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -115,11 +116,13 @@ class LinuxRuntimeManager @Inject constructor(
                     "-b", "/dev:/dev",
                     "-b", "/proc:/proc",
                     "-b", "${context.filesDir.absolutePath}:/android-app",
+                    "-b", "${StorageWorkspaceProvider.getDefaultWorkspaceDir(context).absolutePath}:/workspace",
                     "/bin/sh", "-l"
                 ),
                 workingDirectory = home.absolutePath,
                 environment = mapOf(
                     "HOME" to "/home/usman",
+                    "WORKSPACE" to "/workspace",
                     "PATH" to "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                     "TERM" to "xterm-256color",
                     "GIT_ASKPASS" to gitAskPass,
