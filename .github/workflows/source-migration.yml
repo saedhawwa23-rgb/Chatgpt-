@@ -117,6 +117,10 @@ jobs:
           cp /tmp/oonid-pr/build/out/arm/proot app/src/main/jniLibs/armeabi-v7a/libproot.so
           cp /tmp/oonid-pr/build/out/arm/loader app/src/main/jniLibs/armeabi-v7a/libproot-loader.so
           chmod 755 app/src/main/jniLibs/armeabi-v7a/libproot.so app/src/main/jniLibs/armeabi-v7a/libproot-loader.so
+          mkdir -p app/src/main/assets
+          proot_sha256="$(sha256sum app/src/main/jniLibs/armeabi-v7a/libproot.so | awk '{print $1}')"
+          printf 'source=https://github.com/oonid/pr\ncommit=1b2ea7966b5105e7d58051a394c25da97bf85a7d\nsha256=%s\n' "$proot_sha256" > app/src/main/assets/proot-build.properties
+          cat app/src/main/assets/proot-build.properties
 
       - name: Download and verify Alpine ARMv7 rootfs
         run: |
