@@ -130,9 +130,10 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                                 command = safeArgs
                             }
                             .onFailure { failure ->
-                                // Reuse the existing status surface without invoking an AI provider.
-                                repositoryUrl = repositoryUrl.trim()
-                                command = "echo 'Invalid GitHub repository URL: ${failure.message?.replace("'", "") ?: "validation failed"}'"
+                                // Report validation errors in the local terminal without invoking AI.
+                                val messageText = failure.message?.replace("'", "").orEmpty().ifBlank { "validation failed" }
+                                command = "echo 'Invalid GitHub repository URL: $messageText'"
+                                viewModel.send(command)
                             }
                     },
                     modifier = Modifier.fillMaxWidth(),
