@@ -30,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.opendroid.ai.core.linux.RuntimeStatus
+import com.opendroid.ai.core.termux.TermuxGitHubClone
 import com.opendroid.ai.ui.theme.AppTheme
 import com.opendroid.ai.ui.viewmodel.LinuxTerminalViewModel
 
@@ -37,11 +39,13 @@ import com.opendroid.ai.ui.viewmodel.LinuxTerminalViewModel
 fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Unit) {
     val output by viewModel.output.collectAsState()
     val message by viewModel.message.collectAsState()
+    val runtimeStatus by viewModel.status.collectAsState()
     val diagnostics by viewModel.diagnostics.collectAsState()
     val termuxAvailable by viewModel.termuxAvailable.collectAsState()
     val termuxStatus by viewModel.termuxStatus.collectAsState()
     val context = LocalContext.current
     var command by remember { mutableStateOf("echo USMAN_AND_UMAR_TERMINAL_OK") }
+    var repositoryUrl by remember { mutableStateOf("") }
     var showDiagnostics by remember { mutableStateOf(false) }
     var copyAfterRefresh by remember { mutableStateOf(false) }
 
@@ -60,7 +64,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("TERMUX LINUX TERMINAL", fontWeight = FontWeight.Bold) },
+                title = { Text("INTEGRATED LINUX WORKSPACE", fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } }
             )
         },
@@ -71,30 +75,74 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("TERMUX COMMAND MODE", fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
+                Text("APP-OWNED LINUX + OPTIONAL TERMUX", fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
                 Text(
-                    "Terminal backend: Alpine Linux running through Termux. Command execution is working on this Android 9 device and returns stdout, stderr, and the exit code.",
+                    "Local terminal and public GitHub cloning do not require AI or paid APIs. Install and verify the app-owned ARM32 Alpine/PRoot runtime first; Termux remains an optional fallback.",
                     color = AppTheme.colors.textSecondary
                 )
+                Text("App-owned runtime status: ${runtimeStatus.name}", color = AppTheme.colors.textSecondary)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = viewModel::install, modifier = Modifier.weight(1f)) {
+                        Text("INSTALL / VERIFY LINUX")
+                    }
+                    OutlinedButton(
+                        onClick = viewModel::start,
+                        modifier = Modifier.weight(1f),
+                        enabled = runtimeStatus == RuntimeStatus.READY
+                    ) { Text("START INTERNAL SHELL") }
+                }
             }
             item {
                 OutlinedTextField(
                     value = command,
                     onValueChange = { command = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Alpine command") },
+                    label = { Text("Linux shell command") },
                     singleLine = true
                 )
                 Button(
-                    onClick = { viewModel.runViaTermux(command) },
+                    onClick = { viewModel.send(command) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    enabled = runtimeStatus == RuntimeStatus.READY
+                ) { Text("RUN IN APP-OWNED LINUX") }
+                OutlinedButton(
+                    onClick = { viewModel.runViaTermux(command) },
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = termuxAvailable
-                ) { Text("RUN COMMAND VIA TERMUX") }
+                ) { Text("RUN VIA TERMUX (OPTIONAL FALLBACK)") }
                 Text(termuxStatus, color = AppTheme.colors.textSecondary)
             }
             item {
+                Text("PUBLIC GITHUB CLONE — NO AI REQUIRED", fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
+                OutlinedTextField(
+                    value = repositoryUrl,
+                    onValueChange = { repositoryUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("https://github.com/owner/repository") },
+                    singleLine = true
+                )
+                OutlinedButton(
+                    onClick = {
+                        runCatching { TermuxGitHubClone.command(repositoryUrl) }
+                            .onSuccess { clone ->
+                                val safeArgs = clone.arguments.joinToString(" ")
+                                viewModel.send("if ! command -v git >/dev/null 2>&1; then apk add --no-cache git; fi && cd /home/usman && $safeArgs")
+                                command = safeArgs
+                            }
+                            .onFailure { failure ->
+                                // Reuse the existing status surface without invoking an AI provider.
+                                repositoryUrl = repositoryUrl.trim()
+                                command = "echo 'Invalid GitHub repository URL: ${failure.message?.replace("'", "") ?: "validation failed"}'"
+                            }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = repositoryUrl.isNotBlank() && runtimeStatus == RuntimeStatus.READY
+                ) { Text("CLONE PUBLIC REPOSITORY") }
+                Text("Clone runs inside the app-owned Alpine workspace after installing Git if needed.", color = AppTheme.colors.textSecondary)
+            }
+            item {
                 Text(
-                    "Native app-private PRoot is disabled on Android 9+ because the OS seccomp policy terminates it with SIGSYS (exit 159). Use Termux Command Mode for this device.",
+                    "The patched PRoot path is enabled only when the source-built ARM32 executable and loader pass verification. If Android rejects execution, diagnostics report the actual failure and Termux remains available as a fallback.",
                     color = AppTheme.colors.textSecondary
                 )
                 OutlinedButton(onClick = viewModel::clearOutput, modifier = Modifier.fillMaxWidth()) { Text("CLEAR OUTPUT") }
