@@ -65,34 +65,40 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Install ARM32 cross-compilation toolchain
-        run: |
-          sudo dpkg --add-architecture armhf
-          sudo tee /etc/apt/sources.list.d/armhf-ports.list >/dev/null <<'EOF'
-          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble main universe
-          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe
-          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports noble-security main universe
-          EOF
-          # Keep Ubuntu's amd64-only mirrors restricted to amd64. ARMHF packages
-          # are served by ports.ubuntu.com, not security.ubuntu.com.
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            sudo sed -i '/^Types: deb$/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
-          fi
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf libseccomp-dev:armhf libtalloc-dev:armhf pkg-config
-
-      - name: Build and package pinned ARM32 PRoot
+      - name: Verify Android NDK ARM32 toolchain
         shell: bash
         run: |
           set -euo pipefail
-          git clone https://github.com/termux/proot.git /tmp/proot
-          git -C /tmp/proot checkout --quiet b8c1f5c5c6730dc9d521d5bd5ce1cfeedecde087
-          make -C /tmp/proot/src -j"$(nproc)" CROSS_COMPILE=arm-linux-gnueabihf- CC=arm-linux-gnueabihf-gcc STRIP=arm-linux-gnueabihf-strip CFLAGS='-marm -DARM_cpsr=uregs[16] -DPSR_T_BIT=0x00000020' LDFLAGS="-static -ltalloc -Wl,-z,noexecstack"
-          file /tmp/proot/src/proot | tee /tmp/proot-file.txt
-          grep -E 'ELF 32-bit.*ARM.*EABI5.*statically linked' /tmp/proot-file.txt
+          export NDK_PATH="$ANDROID_HOME/ndk/27.2.12479018"
+          test -x "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi28-clang"
+          command -v make
+          command -v python3
+          command -v readelf
+          command -v file
+          command -v curl
+          echo "Using Android NDK: $NDK_PATH"
+
+      - name: Cross-compile oonid/pr patched PRoot and PROOT_LOADER for ARM32
+        shell: bash
+        run: |
+          set -euo pipefail
+          # oonid/pr's source build emits both the patched proot executable and
+          # its PROOT_LOADER using Android NDK clang (API 28), not ARM64 prebuilts.
+          git clone --depth 1 https://github.com/oonid/pr.git /tmp/oonid-pr
+          git -C /tmp/oonid-pr fetch --depth 1 origin 1b2ea7966b5105e7d58051a394c25da97bf85a7d
+          git -C /tmp/oonid-pr checkout --quiet 1b2ea7966b5105e7d58051a394c25da97bf85a7d
+          git config --global url."https://github.com/".insteadOf git@github.com:
+          git -C /tmp/oonid-pr submodule update --init --depth 1 vendor/samba
+          bash /tmp/oonid-pr/scripts/build.sh --arch=arm --ndk-path="$ANDROID_HOME/ndk/27.2.12479018"
+          file /tmp/oonid-pr/build/out/arm/proot | tee /tmp/proot-file.txt
+          grep -E 'ELF 32-bit.*ARM' /tmp/proot-file.txt
+          test -s /tmp/oonid-pr/build/out/arm/loader
+          file /tmp/oonid-pr/build/out/arm/loader | tee /tmp/proot-loader-file.txt
+          grep -E 'ELF 32-bit.*ARM' /tmp/proot-loader-file.txt
           mkdir -p app/src/main/jniLibs/armeabi-v7a
-          cp /tmp/proot/src/proot app/src/main/jniLibs/armeabi-v7a/libproot.so
-          chmod 755 app/src/main/jniLibs/armeabi-v7a/libproot.so
+          cp /tmp/oonid-pr/build/out/arm/proot app/src/main/jniLibs/armeabi-v7a/libproot.so
+          cp /tmp/oonid-pr/build/out/arm/loader app/src/main/jniLibs/armeabi-v7a/libproot-loader.so
+          chmod 755 app/src/main/jniLibs/armeabi-v7a/libproot.so app/src/main/jniLibs/armeabi-v7a/libproot-loader.so
 
       - name: Download and verify Alpine ARMv7 rootfs
         run: |
@@ -111,6 +117,7 @@ jobs:
           test -s "$apk"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$apk" | grep -E "package:|native-code"
           unzip -l "$apk" | grep -F 'lib/armeabi-v7a/libproot.so'
+          unzip -l "$apk" | grep -F 'lib/armeabi-v7a/libproot-loader.so'
           sha256sum "$apk" | tee app/build/outputs/apk/debug/SHA256SUMS.txt
 
       - name: Upload debug APK artifact
