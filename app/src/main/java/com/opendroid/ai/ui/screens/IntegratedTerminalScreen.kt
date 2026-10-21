@@ -82,11 +82,11 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                 )
                 Text("App-owned runtime status: ${runtimeStatus.name}", color = AppTheme.colors.textSecondary)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = viewModel::install, modifier = Modifier.weight(1f)) {
+                    Button(onClick = { viewModel.install() }, modifier = Modifier.weight(1f)) {
                         Text("INSTALL / VERIFY LINUX")
                     }
                     OutlinedButton(
-                        onClick = viewModel::start,
+                        onClick = { viewModel.start() },
                         modifier = Modifier.weight(1f),
                         enabled = runtimeStatus == RuntimeStatus.READY
                     ) { Text("START INTERNAL SHELL") }
