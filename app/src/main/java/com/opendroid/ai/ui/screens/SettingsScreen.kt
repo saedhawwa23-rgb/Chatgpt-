@@ -57,6 +57,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.ui.platform.LocalContext
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -111,6 +113,10 @@ fun SettingsScreen(
     var driveHubLabel by remember {
         mutableStateOf(StorageWorkspaceProvider.getCustomFolderDisplayName(context))
     }
+    var localAppName by remember { mutableStateOf("") }
+    var localUrl by remember { mutableStateOf("") }
+    var localShareText by remember { mutableStateOf("") }
+    var localToolsStatus by remember { mutableStateOf<String?>(null) }
     val driveHubPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -231,6 +237,111 @@ fun SettingsScreen(
                             onClick = { driveHubPicker.launch(null) },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("CONNECT DRIVE / CHOOSE WORKSPACE") }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardBackground)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("ZERO-COST LOCAL PHONE TOOLS", fontWeight = FontWeight.Bold, color = AccentCyan)
+                        Text(
+                            "These actions run directly on Android and do not call an AI provider or require an API key.",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                        OutlinedTextField(
+                            value = localAppName,
+                            onValueChange = { localAppName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Installed app name or package") },
+                            singleLine = true
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val query = localAppName.trim()
+                                if (query.isBlank()) {
+                                    localToolsStatus = "Enter an installed app name or package."
+                                } else {
+                                    val pm = context.packageManager
+                                    val match = runCatching {
+                                        pm.getInstalledApplications(0).firstOrNull { app ->
+                                            pm.getApplicationLabel(app).toString().contains(query, ignoreCase = true) ||
+                                                app.packageName.equals(query, ignoreCase = true)
+                                        }
+                                    }.getOrNull()
+                                    val launch = match?.let { pm.getLaunchIntentForPackage(it.packageName) }
+                                    if (launch == null) {
+                                        localToolsStatus = "No launchable installed app matched '$query'."
+                                    } else {
+                                        runCatching {
+                                            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            context.startActivity(launch)
+                                            localToolsStatus = "Opened ${match.packageName}."
+                                        }.onFailure {
+                                            localToolsStatus = "Could not open the selected app: ${it.message ?: "launch failed"}"
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("OPEN INSTALLED APP") }
+                        OutlinedTextField(
+                            value = localUrl,
+                            onValueChange = { localUrl = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("URL (example.com or https://example.com)") },
+                            singleLine = true
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val raw = localUrl.trim()
+                                val normalized = if (raw.startsWith("https://", true) || raw.startsWith("http://", true)) raw else "https://$raw"
+                                val uri = runCatching { Uri.parse(normalized) }.getOrNull()
+                                if (uri?.scheme in listOf("http", "https") && !uri.host.isNullOrBlank()) {
+                                    runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                        localToolsStatus = "Browser intent opened for $normalized."
+                                    }.onFailure {
+                                        localToolsStatus = "Could not open URL: ${it.message ?: "no browser handler"}"
+                                    }
+                                } else {
+                                    localToolsStatus = "Enter a valid http:// or https:// URL."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("OPEN URL") }
+                        OutlinedTextField(
+                            value = localShareText,
+                            onValueChange = { localShareText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Text or link to share") },
+                            minLines = 2
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val payload = localShareText.trim()
+                                if (payload.isBlank()) {
+                                    localToolsStatus = "Enter text or a link to share."
+                                } else {
+                                    runCatching {
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, payload)
+                                        }
+                                        context.startActivity(Intent.createChooser(send, "Share with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                        localToolsStatus = "Android share sheet opened. Choose a destination to send the content."
+                                    }.onFailure {
+                                        localToolsStatus = "Could not open share sheet: ${it.message ?: "no share handler"}"
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("OPEN SHARE SHEET") }
+                        localToolsStatus?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
                     }
                 }
             }
