@@ -109,8 +109,7 @@ class LinuxTerminalViewModel @Inject constructor(
                 appendLine("TERMUX_AVAILABLE=${termux.isCommandExecutionAvailable()}")
                 appendLine("TERMUX_VERSION=${termux.versionName() ?: "not installed"}")
                 appendLine("TERMUX_STATUS=${termux.availabilityMessage()}")
-                appendLine("NATIVE_PROOT=DISABLED_ON_ANDROID_9_PLUS")
-                appendLine("NATIVE_PROOT_REASON=Android seccomp terminates app-owned PRoot with SIGSYS/exit 159")
+                appendLine(runtime.diagnosticsReport())
             }
         }
     }
