@@ -298,6 +298,18 @@ object ActionSchema {
             category = ActionCategory.SYSTEM
         ),
         ActionDefinition(
+            name = "SHARE_CONTENT",
+            description = """Opens Android's native share sheet for text and/or a URL.
+                This is a local phone action and does not require an AI API key once invoked.
+                Opening the share sheet does not mean the content has been sent.""",
+            params = listOf(
+                ParamDefinition("text", ParamType.STRING, false, "Optional text to share"),
+                ParamDefinition("url", ParamType.STRING, false, "Optional URL to share")
+            ),
+            examples = listOf("share this text", "share this link", "open share sheet"),
+            category = ActionCategory.SYSTEM
+        ),
+        ActionDefinition(
             name = "ENABLE_PRIVATE_MODE",
             description = "Opens an incognito/private browsing window in Chrome",
             params = emptyList(),
