@@ -29,9 +29,12 @@ enum class TermuxTask(val label: String, val executable: String, val arguments: 
     SYSTEM_INFO("Read Termux system info", "uname", arrayOf("-a")),
     UPDATE_PACKAGES("Refresh package index", "pkg", arrayOf("update", "-y")),
     INSTALL_DEV_TOOLS(
-        "Install Git, Python, Node.js and build tools",
-        "pkg",
-        arrayOf("install", "-y", "git", "python", "nodejs", "clang", "make", "cmake")
+        "Run zero-cost Termux setup.sh (Python, Node.js, Git, build tools)",
+        "sh",
+        arrayOf(
+            "-lc",
+            "curl --fail --silent --show-error --location 'https://raw.githubusercontent.com/saedhawwa23-rgb/Chatgpt-/a3e027a22970e1ed07a0c9e1178d4258516c1b3b/scripts/termux/setup.sh' -o \"\$HOME/setup.sh\" && bash \"\$HOME/setup.sh\""
+        )
     )
 }
 
