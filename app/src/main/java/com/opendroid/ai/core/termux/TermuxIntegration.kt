@@ -35,6 +35,22 @@ enum class TermuxTask(val label: String, val executable: String, val arguments: 
             "-lc",
             "curl --fail --silent --show-error --location 'https://raw.githubusercontent.com/saedhawwa23-rgb/Chatgpt-/a3e027a22970e1ed07a0c9e1178d4258516c1b3b/scripts/termux/setup.sh' -o \"\$HOME/setup.sh\" && bash \"\$HOME/setup.sh\""
         )
+    ),
+    INSTALL_OPEN_SOURCE_AGENTS(
+        "Clone OpenManus and OpenSwarm; attempt Python dependencies",
+        "sh",
+        arrayOf(
+            "-lc",
+            "curl --fail --silent --show-error --location 'https://raw.githubusercontent.com/saedhawwa23-rgb/Chatgpt-/adb1fb99b7a564191cdcf4a3ecd537fe1d37ba10/scripts/termux/install-agents.sh' -o \"\$HOME/install-agents.sh\" && bash \"\$HOME/install-agents.sh\""
+        )
+    ),
+    STOP_AGENT_JOBS(
+        "Send SIGINT to OpenManus/OpenSwarm processes",
+        "sh",
+        arrayOf(
+            "-lc",
+            "curl --fail --silent --show-error --location 'https://raw.githubusercontent.com/saedhawwa23-rgb/Chatgpt-/14a0aa8509f01da09d21bfdffc1b16cbbbcf7e56/scripts/termux/stop-agents.sh' -o \"\$HOME/stop-agents.sh\" && bash \"\$HOME/stop-agents.sh\""
+        )
     )
 }
 
