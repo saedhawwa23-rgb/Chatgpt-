@@ -105,7 +105,12 @@ jobs:
               cp -a "${ndk_sysroot}/usr/lib/${sysroot_triple}" "${sysroot}/usr/lib/"'''
           if old not in source:
               raise SystemExit("Expected upstream NDK sysroot line not found; refusing an unverified patch.")
-          script.write_text(source.replace(old, new, 1))
+          source = source.replace(old, new, 1)
+          old_tls = 'fix_tls_alignment() {\\n    local arch="$1"\\n'
+          new_tls = 'fix_tls_alignment() {\\n    local arch="$1"\\n    if [ "$arch" = "arm" ]; then\\n        info "Skipping upstream ELF64-only TLS alignment patch for 32-bit ARM EABI"\\n        return\\n    fi\\n'
+          if old_tls not in source:
+              raise SystemExit("Expected upstream TLS alignment function not found; refusing an unverified patch.")
+          script.write_text(source.replace(old_tls, new_tls, 1))
           PY
           bash /tmp/oonid-pr/scripts/build.sh --arch=arm --ndk-path="$ANDROID_HOME/ndk/27.2.12479018"
           file /tmp/oonid-pr/build/out/arm/proot | tee /tmp/proot-file.txt
