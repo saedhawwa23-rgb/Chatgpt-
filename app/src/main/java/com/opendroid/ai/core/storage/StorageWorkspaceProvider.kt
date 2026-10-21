@@ -321,7 +321,7 @@ object StorageWorkspaceProvider {
         var connection: HttpURLConnection? = null
         try {
             val source = Uri.parse(sourceUrl.trim())
-            if (source.scheme !in listOf("http", "https") || source.host.isNullOrBlank() || !source.encodedUserInfo.isNullOrBlank()) {
+            if ((source.scheme != "http" && source.scheme != "https") || source.host.isNullOrBlank() || !source.encodedUserInfo.isNullOrBlank()) {
                 return@withContext ActionResult(false, null, "Only valid public HTTP(S) URLs are supported.")
             }
             val cleanPath = cleanRelativePath(destinationPath)
