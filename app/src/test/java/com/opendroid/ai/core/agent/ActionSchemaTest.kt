@@ -107,9 +107,9 @@ class ActionSchemaTest {
 
     @Test
     fun `native share sheet is registered as a local optional-parameter action`() {
-        val share = ActionSchema.getAction("SHARE_CONTENT")
+        val share = ActionSchema.getAction("SHARE_CONTENT") ?: error("SHARE_CONTENT must be registered")
         assertNotNull(share)
-        assertEquals(ActionCategory.SYSTEM, share!!.category)
+        assertEquals(ActionCategory.SYSTEM, share.category)
         assertTrue(share.params.all { !it.required })
         assertTrue(share.params.any { it.name == "text" })
         assertTrue(share.params.any { it.name == "url" })
