@@ -96,8 +96,8 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                     OutlinedButton(
                         onClick = { viewModel.start() },
                         modifier = Modifier.weight(1f),
-                        enabled = runtimeStatus == RuntimeStatus.READY
-                    ) { Text("START INTERNAL SHELL") }
+                        enabled = runtimeStatus == RuntimeStatus.READY && !sessionStarted
+                    ) { Text(if (sessionStarted) "INTERNAL SHELL READY" else "START INTERNAL SHELL") }
                 }
             }
             item {
@@ -111,7 +111,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                 Button(
                     onClick = { viewModel.send(command) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    enabled = runtimeStatus == RuntimeStatus.READY
+                    enabled = sessionStarted
                 ) { Text("RUN IN APP-OWNED LINUX") }
                 OutlinedButton(
                     onClick = { viewModel.runViaTermux(command) },
@@ -142,13 +142,13 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = runtimeStatus == RuntimeStatus.READY
+                    enabled = sessionStarted
                 ) { Text("INSTALL OPENMANUS + OPENSWARM") }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { viewModel.read() },
                         modifier = Modifier.weight(1f),
-                        enabled = runtimeStatus == RuntimeStatus.READY
+                        enabled = sessionStarted
                     ) { Text("REFRESH OUTPUT") }
                     OutlinedButton(
                         onClick = {
@@ -198,7 +198,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                             }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = repositoryUrl.isNotBlank() && runtimeStatus == RuntimeStatus.READY
+                    enabled = repositoryUrl.isNotBlank() && sessionStarted
                 ) { Text("CLONE PUBLIC REPOSITORY") }
                 Text("Clone runs inside the app-owned Alpine workspace after installing Git if needed.", color = AppTheme.colors.textSecondary)
             }
