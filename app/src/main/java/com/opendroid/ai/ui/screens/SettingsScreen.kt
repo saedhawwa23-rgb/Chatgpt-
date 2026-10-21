@@ -113,6 +113,9 @@ fun SettingsScreen(
     var driveHubLabel by remember {
         mutableStateOf(StorageWorkspaceProvider.getCustomFolderDisplayName(context))
     }
+    var driveExportSource by remember { mutableStateOf("") }
+    var driveExportDestination by remember { mutableStateOf("exports/output.txt") }
+    var driveExportStatus by remember { mutableStateOf<String?>(null) }
     var localAppName by remember { mutableStateOf("") }
     var localUrl by remember { mutableStateOf("") }
     var localShareText by remember { mutableStateOf("") }
@@ -237,6 +240,34 @@ fun SettingsScreen(
                             onClick = { driveHubPicker.launch(null) },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("CONNECT DRIVE / CHOOSE WORKSPACE") }
+                        OutlinedTextField(
+                            value = driveExportSource,
+                            onValueChange = { driveExportSource = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Source file in app workspace") },
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = driveExportDestination,
+                            onValueChange = { driveExportDestination = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Destination path in selected folder") },
+                            singleLine = true
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val source = driveExportSource.trim()
+                                val destination = driveExportDestination.trim()
+                                if (source.isBlank() || destination.isBlank()) {
+                                    driveExportStatus = "Enter both a source and destination path."
+                                } else {
+                                    val result = StorageWorkspaceProvider.copyFile(context, source, destination)
+                                    driveExportStatus = if (result.success) result.data ?: "Export completed." else result.error ?: "Export failed."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("COPY WORKSPACE OUTPUT TO DRIVE / FOLDER") }
+                        driveExportStatus?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
                     }
                 }
             }
