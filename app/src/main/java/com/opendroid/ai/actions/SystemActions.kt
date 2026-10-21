@@ -1193,7 +1193,7 @@ class SystemActions @Inject constructor(
         override suspend fun execute(params: Map<String, String>, context: Context): ActionResult {
             val text = params["text"]?.trim().orEmpty()
             val url = params["url"]?.trim().orEmpty()
-            val payload = listOf(text, url).filter { it.isNotBlank() }.joinToString("\\n")
+            val payload = listOf(text, url).filter { it.isNotBlank() }.joinToString("\n")
             if (payload.isBlank()) {
                 return ActionResult(false, null, "Provide text or a URL to share.")
             }
