@@ -30,7 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import java.io.File
 import com.opendroid.ai.core.linux.RuntimeStatus
+import com.opendroid.ai.core.storage.StorageWorkspaceProvider
 import com.opendroid.ai.core.termux.TermuxGitHubClone
 import com.opendroid.ai.ui.theme.AppTheme
 import com.opendroid.ai.ui.viewmodel.LinuxTerminalViewModel
@@ -46,6 +48,7 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
     val context = LocalContext.current
     var command by remember { mutableStateOf("echo USMAN_AND_UMAR_TERMINAL_OK") }
     var repositoryUrl by remember { mutableStateOf("") }
+    var agentInstallStatus by remember { mutableStateOf<String?>(null) }
     var showDiagnostics by remember { mutableStateOf(false) }
     var copyAfterRefresh by remember { mutableStateOf(false) }
 
@@ -111,6 +114,54 @@ fun IntegratedTerminalScreen(viewModel: LinuxTerminalViewModel, onBack: () -> Un
                     enabled = termuxAvailable
                 ) { Text("RUN VIA TERMUX (OPTIONAL FALLBACK)") }
                 Text(termuxStatus, color = AppTheme.colors.textSecondary)
+            }
+            item {
+                Text("OPENMANUS + OPENSWARM — APP-OWNED ALPINE", fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
+                Text(
+                    "This downloads both public repositories and attempts dependency installation inside the patched app-owned Linux workspace. ARM32 package compatibility is reported in the log; it is not assumed.",
+                    color = AppTheme.colors.textSecondary
+                )
+                Button(
+                    onClick = {
+                        runCatching {
+                            val workspace = StorageWorkspaceProvider.getDefaultWorkspaceDir(context)
+                            val script = File(workspace, "install-agents-alpine.sh")
+                            context.assets.open("install-agents-alpine.sh").use { input ->
+                                script.outputStream().use { output -> input.copyTo(output) }
+                            }
+                            script.setExecutable(true, false)
+                            viewModel.send("sh /workspace/install-agents-alpine.sh; rc=$?; echo AGENT_INSTALL_EXIT:$rc")
+                            agentInstallStatus = "Agent setup started. Use REFRESH OUTPUT to collect its result, then export the log to Drive."
+                        }.onFailure {
+                            agentInstallStatus = "Could not prepare agent installer: ${it.message ?: "asset copy failed"}"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = runtimeStatus == RuntimeStatus.READY
+                ) { Text("INSTALL OPENMANUS + OPENSWARM") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.read() },
+                        modifier = Modifier.weight(1f),
+                        enabled = runtimeStatus == RuntimeStatus.READY
+                    ) { Text("REFRESH OUTPUT") }
+                    OutlinedButton(
+                        onClick = {
+                            val result = StorageWorkspaceProvider.copyFile(
+                                context,
+                                "agent-install-results.txt",
+                                "agent-results/agent-install-results.txt"
+                            )
+                            agentInstallStatus = if (result.success) {
+                                result.data ?: "Agent log exported to selected workspace."
+                            } else {
+                                result.error ?: "Agent log export failed."
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("EXPORT LOG TO DRIVE") }
+                }
+                agentInstallStatus?.let { Text(it, color = AppTheme.colors.textSecondary) }
             }
             item {
                 Text("PUBLIC GITHUB CLONE — NO AI REQUIRED", fontWeight = FontWeight.Bold, color = AppTheme.colors.textPrimary)
