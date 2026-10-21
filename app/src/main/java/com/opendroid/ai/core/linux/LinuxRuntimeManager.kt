@@ -178,8 +178,9 @@ class LinuxRuntimeManager @Inject constructor(
             appendLine("resolvedProotPath=${prootFile.absolutePath}")
             appendLine("prootPathPolicy=PACKAGED_NATIVE_LIBRARY_ONLY")
             appendLine("legacyWritableProotPathRejected=${rootDir.resolve("proot-armv7").absolutePath}")
-            appendLine("prootExpectedSha256=$PROOT_SHA256")
-            appendLine("prootCommit=$PROOT_COMMIT")
+            appendLine("prootSource=${expectedProotSource()}")
+            appendLine("prootExpectedSha256=${expectedProotSha256()}")
+            appendLine("prootCommit=${expectedProotCommit()}")
             appendLine("prootRequiredOption=$PROOT_REQUIRED_OPTION")
             appendLine("prootFileSize=${check.fileSize}")
             appendLine("prootSha256=${check.sha256 ?: "unavailable"}")
@@ -203,12 +204,34 @@ class LinuxRuntimeManager @Inject constructor(
         }
     }
 
+    /**
+     * CI embeds the SHA-256 and source revision of the ARM32 PRoot built from source.
+     * Developer builds without that generated manifest retain the existing pinned binary.
+     */
+    private fun prootBuildMetadata(): Map<String, String> = runCatching {
+        context.assets.open(PROOT_METADATA_ASSET).bufferedReader(Charsets.UTF_8).useLines { lines ->
+            lines.mapNotNull { line ->
+                val split = line.split("=", limit = 2)
+                if (split.size == 2) split[0].trim() to split[1].trim() else null
+            }.toMap()
+        }
+    }.getOrDefault(emptyMap())
+
+    private fun expectedProotSha256(): String =
+        prootBuildMetadata()["sha256"]?.takeIf { it.matches(Regex("[0-9a-fA-F]{64}")) } ?: PROOT_SHA256
+
+    private fun expectedProotCommit(): String =
+        prootBuildMetadata()["commit"]?.takeIf { it.matches(Regex("[0-9a-fA-F]{40}")) } ?: PROOT_COMMIT
+
+    private fun expectedProotSource(): String =
+        prootBuildMetadata()["source"]?.takeIf { it.startsWith("https://") } ?: PROOT_SOURCE
+
     private fun hasVerifiedProot(): Boolean =
         prootFile.isFile &&
             prootFile.length() > 0L &&
             prootFile.canExecute() &&
-            sha256OrNull(prootFile).equals(PROOT_SHA256, ignoreCase = true) &&
-            prootVerificationFile.readTextOrNull() == PROOT_COMMIT
+            sha256OrNull(prootFile).equals(expectedProotSha256(), ignoreCase = true) &&
+            prootVerificationFile.readTextOrNull() == expectedProotCommit()
 
     private fun ensureProotReady() {
         check(prootFile.parentFile?.canonicalFile != rootDir.canonicalFile) {
@@ -246,7 +269,7 @@ class LinuxRuntimeManager @Inject constructor(
         if (!path.isFile || path.length() == 0L) {
             return initial.copy(exception = "native-library file is missing or empty").also { recordProotCheck(it) }
         }
-        if (!initial.sha256.equals(PROOT_SHA256, ignoreCase = true)) {
+        if (!initial.sha256.equals(expectedProotSha256(), ignoreCase = true)) {
             return initial.copy(exception = "native-library SHA-256 does not match pinned PRoot").also { recordProotCheck(it) }
         }
         if (!path.canExecute()) {
@@ -285,7 +308,7 @@ class LinuxRuntimeManager @Inject constructor(
                 timedOut = !finished,
                 exception = null
             ).also { result ->
-                if (result.success) prootVerificationFile.writeText(PROOT_COMMIT, Charsets.UTF_8)
+                if (result.success) prootVerificationFile.writeText(expectedProotCommit(), Charsets.UTF_8)
                 else prootVerificationFile.delete()
                 recordProotCheck(result)
             }
@@ -398,6 +421,7 @@ class LinuxRuntimeManager @Inject constructor(
         private const val ROOTFS_DIR = "alpine-armv7"
         private const val ROOTFS_ARCHIVE = "alpine-minirootfs-3.24.2-armv7.tar.gz"
         private const val PROOT_NAME = "libproot.so"
+        private const val PROOT_METADATA_ASSET = "proot-build.properties"
         private const val STATE_FILE = "install.state"
         private const val PROOT_VERIFIED_STATE = "proot.verified"
         private const val GIT_ASKPASS_FILE = ".github-askpass"
