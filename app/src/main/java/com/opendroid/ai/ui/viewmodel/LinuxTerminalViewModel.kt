@@ -23,6 +23,8 @@ class LinuxTerminalViewModel @Inject constructor(
 ) : ViewModel() {
     private val _status = MutableStateFlow(runtime.status())
     val status: StateFlow<RuntimeStatus> = _status.asStateFlow()
+    private val _sessionStarted = MutableStateFlow(false)
+    val sessionStarted: StateFlow<Boolean> = _sessionStarted.asStateFlow()
     private val _output = MutableStateFlow("")
     val output: StateFlow<String> = _output.asStateFlow()
     private val _message = MutableStateFlow<String?>(null)
@@ -60,10 +62,12 @@ class LinuxTerminalViewModel @Inject constructor(
         runCatching { sessions.create() }
             .onSuccess { info ->
                 sessionId = info.id
+                _sessionStarted.value = true
                 _message.value = "Integrated Linux session started (${info.backend})."
                 read()
             }
             .onFailure {
+                _sessionStarted.value = false
                 _message.value = it.message ?: "Could not start integrated Linux"
                 diagnostics()
             }
@@ -116,5 +120,8 @@ class LinuxTerminalViewModel @Inject constructor(
 
     fun clearOutput() { _output.value = "" }
 
-    override fun onCleared() { sessions.closeAll() }
+    override fun onCleared() {
+        _sessionStarted.value = false
+        sessions.closeAll()
+    }
 }
