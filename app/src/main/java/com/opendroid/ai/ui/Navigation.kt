@@ -334,6 +334,7 @@ fun OpenDroidNavigation(
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Chat : Screen("chat", "Chat", Icons.Default.Chat)
+    object Tasks : Screen("tasks", "Tasks", Icons.Default.Checklist)
     object Plan : Screen("plan", "Plan", Icons.Default.List)
     object Memory : Screen("memory", "Memory", Icons.Default.Star)
     object Social : Screen("social", "Social", Icons.Default.Share)
@@ -398,6 +399,7 @@ fun MainDashboard(
 
     val tabs = listOf(
         Screen.Chat,
+        Screen.Tasks,
         Screen.Plan,
         Screen.Memory,
         Screen.Social,
@@ -475,6 +477,7 @@ fun MainDashboard(
             ) { tab ->
                 when (tab) {
                     Screen.Chat -> ChatScreen(viewModel = chatViewModel)
+                    Screen.Tasks -> AutomationWorkspaceScreen()
                     Screen.Plan -> PlanScreen(viewModel = planViewModel)
                     Screen.Memory -> MemoryScreen(viewModel = memoryViewModel)
                     Screen.Social -> SocialScreen(viewModel = socialViewModel)
